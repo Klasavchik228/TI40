@@ -55,9 +55,12 @@ public class DescriptionGeneratorController {
 
     @GetMapping("/generate")
     public String showForm(Model model) {
-        model.addAttribute("request", new ProductDescriptionRequest());
+        if (!model.containsAttribute("request")) {
+            model.addAttribute("request", new ProductDescriptionRequest());
+        }
         return "generator-form";
     }
+
 
     private String buildPrompt(ProductDescriptionRequest request) {
         return String.format(

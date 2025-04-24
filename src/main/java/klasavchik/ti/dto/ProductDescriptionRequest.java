@@ -13,7 +13,7 @@ public class ProductDescriptionRequest {
 
     private String style = "friendly";
     private String length = "medium";
-    private String focus = "quality";
+    private String focus ;
     private boolean simplifyTerms = true;
 
     public boolean isSimplifyTerms() {
