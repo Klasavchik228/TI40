@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Генератор описания товара</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f7f7;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .result, .error {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .error {
+            border-left: 5px solid #e74c3c;
+            color: #c0392b;
+        }
+
+        .result {
+            border-left: 5px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Генератор описания товара</h1>
+
+<form th:action="@{/product-description/generate}" method="post">
+    <label>Название товара:</label>
+    <input type="text" name="productName">
+
+    <label>Характеристики:</label>
+    <textarea name="productFeatures"></textarea>
+
+    <label>Длина описания:</label>
+    <select name="length">
+        <option value="short">Короткое</option>
+        <option value="medium">Среднее</option>
+        <option value="long">Длинное</option>
+    </select>
+
+    <label>Стиль:</label>
+    <select name="style">
+        <option value="formal">Формальный</option>
+        <option value="friendly">Дружелюбный</option>
+        <option value="creative">Креативный</option>
+    </select>
+
+    <label>Акцент на:</label>
+    <input type="text" name="focus">
+
+    <label><input type="checkbox" name="simplifyTerms"> Упростить технические термины</label>
+
+    <button type="submit">Сгенерировать</button>
+</form>
+
+<div class="result" th:if="${generatedDescription}">
+    <h2>Сгенерированное описание:</h2>
+    <p th:text="${generatedDescription.description}"></p>
+</div>
+
+<div class="error" th:if="${error}">
+    <p th:text="${error}"></p>
+</div>
+
+</body>
+</html>
