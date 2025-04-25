@@ -28,7 +28,6 @@
 
 ## Установка и запуск
 1. Клонируйте репозиторий:
-   ```bash
   git clone https://github.com/Klasavchik228/TI40.git
   cd TI40
 
