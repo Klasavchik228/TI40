@@ -29,7 +29,6 @@
 ## Установка и запуск
 1. Клонируйте репозиторий:
   git clone https://github.com/Klasavchik228/TI40.git
-  cd TI40
 
 2. Соберите проект с помощью Gradle:
   ./gradlew bootRun
