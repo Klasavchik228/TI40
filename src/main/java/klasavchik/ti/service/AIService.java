@@ -4,20 +4,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class AIService {
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${openrouter.api.key}")
     private String apiKey;
@@ -27,69 +25,79 @@ public class AIService {
             return "❌ Ошибка: входной промт пустой!";
         }
 
-        String sanitizedPrompt = prompt.replaceAll("[\\p{Cntrl}]", "").trim();
-        sanitizedPrompt = sanitizedPrompt.replace("\n", " ").replace("\r", " ");
+        String sanitizedPrompt = prompt.replaceAll("[\\p{Cntrl}]", "").trim()
+                .replace("\n", " ").replace("\r", " ");
 
         try {
-            // 1. Формируем URL и заголовки
             String apiUrl = "https://openrouter.ai/api/v1/chat/completions";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
             headers.set("Authorization", "Bearer " + apiKey);
-            headers.set("HTTP-Referer", "YOUR_SITE_URL"); // Замените на ваш URL
-            headers.set("X-Title", "YOUR_APP_NAME"); // Замените на название вашего приложения
+            headers.set("HTTP-Referer", "YOUR_SITE_URL");
+            headers.set("X-Title", "YOUR_APP_NAME");
 
-            // 2. Создаем JSON-тело запроса
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", "anthropic/claude-2"); // Можно выбрать другую модель
+            String requestJson = objectMapper.writeValueAsString(Map.of(
+                    "model", "anthropic/claude-2",
+                    "messages", Collections.singletonList(Map.of(
+                            "role", "user",
+                            "content", sanitizedPrompt
+                    )),
+                    "max_tokens", 700,
+                    "temperature", 0.7
+            ));
 
-            Map<String, String> message = new HashMap<>();
-            message.put("role", "user");
-            message.put("content", sanitizedPrompt);
+            System.out.println("Отправляем запрос к API OpenRouter...");
 
-            requestBody.put("messages", new Map[]{message});
-            requestBody.put("max_tokens", 1000);
-            requestBody.put("temperature", 0.7);
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            String requestJson = objectMapper.writeValueAsString(requestBody);
-
-            System.out.println("Очищенный промт: " + sanitizedPrompt);
-
-            // 3. Отправляем запрос
-            HttpEntity<String> request = new HttpEntity<>(requestJson, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(
+            ResponseEntity<String> response = restTemplate.exchange(
                     apiUrl,
-                    request,
+                    HttpMethod.POST,
+                    new HttpEntity<>(requestJson, headers),
                     String.class
             );
 
-            // 4. Обрабатываем ответ
-            if (response.getStatusCode().is2xxSuccessful()) {
-                return parseGeneratedText(response.getBody());
-            } else {
-                throw new RuntimeException("API error: " + response.getStatusCode());
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                System.err.println("Ошибка API: " + response.getStatusCode());
+                return "❌ Ошибка API: " + response.getStatusCode();
             }
+
+            return parseGeneratedText(response.getBody());
         } catch (Exception e) {
+            System.err.println("Ошибка при генерации описания: " + e.getMessage());
             return "⚠️ Ошибка генерации: " + e.getMessage();
         }
     }
 
     private String parseGeneratedText(String jsonResponse) {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
             JsonNode root = objectMapper.readTree(jsonResponse);
 
-            if (root.has("choices") && root.get("choices").isArray() && root.get("choices").size() > 0) {
-                JsonNode firstChoice = root.get("choices").get(0);
-                if (firstChoice.has("message") && firstChoice.get("message").has("content")) {
-                    return firstChoice.get("message").get("content").asText();
+            // 1. Проверяем наличие ошибки
+            if (root.has("error")) {
+                String errorMsg = root.path("error").path("message").asText("Неизвестная ошибка API");
+                System.err.println("API вернуло ошибку: " + errorMsg);
+                return "❌ Ошибка API: " + errorMsg;
+            }
+
+            // 2. Пробуем разные варианты извлечения контента
+            if (root.has("choices")) {
+                JsonNode firstChoice = root.path("choices").get(0);
+                if (firstChoice != null && firstChoice.has("message")) {
+                    return firstChoice.path("message").path("content").asText("❌ Пустой ответ от API");
                 }
             }
-            return "❌ Некорректный ответ от API";
+
+            // 3. Альтернативный вариант структуры
+            if (root.has("message")) {
+                return root.path("message").path("content").asText("❌ Пустой ответ от API");
+            }
+
+            System.err.println("Неизвестная структура ответа API: " + root.toPrettyString());
+            return "❌ Не удалось обработать ответ API";
         } catch (Exception e) {
-            return "❌ Ошибка обработки ответа: " + e.getMessage();
+            System.err.println("Ошибка парсинга ответа: " + e.getMessage());
+            return "❌ Ошибка обработки ответа API";
         }
     }
 }
