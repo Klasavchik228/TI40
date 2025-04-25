@@ -31,8 +31,10 @@
    ```bash
   git clone https://github.com/Klasavchik228/TI40.git
   cd TI40
+
 2. Соберите проект с помощью Gradle:
   ./gradlew bootRun
+
 3. Открыть в браузере:
   http://localhost:8080
 
